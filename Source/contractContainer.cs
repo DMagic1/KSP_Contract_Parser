@@ -1,12 +1,40 @@
-﻿using System;
+﻿#region license
+/*The MIT License (MIT)
+Contract Container - An object for storing information about contracts
+
+Copyright (c) 2016 DMagic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
 using FinePrint.Utilities;
 using Contracts;
 using Contracts.Templates;
+using Contracts.Agents;
 using FinePrint.Contracts;
 using FinePrint.Contracts.Parameters;
 
@@ -16,14 +44,19 @@ namespace ContractParser
 	{
 		private Contract root;
 		private Guid id;
-		private double totalReward, duration;
-		private double expire, deadline, completed;
-		private bool showNote;
+		private float totalFundsReward, totalRepReward, totalSciReward;
+		private float totalFundsPenalty, totalRepPenalty;
+		private double expire, duration, deadline, completed;
+		private bool showNote, canBeDeclined, canBeCancelled;
+		private string briefing;
 		private string daysToExpire;
 		private string targetPlanet;
-		private string title = "";
-		private string notes = "";
-		private string fundsRewString, fundsPenString, repRewString, repPenString, sciRewString;
+		private string title;
+		private string notes;
+		private float fundsRew, fundsPen, fundsAdv, repRew, repPen, sciRew, decPen;
+		private float fundsRewStrat, fundsPenStrat, fundsAdvStrat, repRewStrat, repPenStrat, sciRewStrat;
+		private string fundsAdvString, fundsRewString, fundsPenString, repRewString, repPenString, sciRewString, decPenString;
+		private Agent agent;
 		private List<parameterContainer> paramList = new List<parameterContainer>();
 		private List<parameterContainer> allParamList = new List<parameterContainer>();
 
@@ -37,14 +70,65 @@ namespace ContractParser
 			}
 			catch (Exception e)
 			{
-				Debug.LogError("[CapCom] Contract Guid not set, skipping...: " + e);
+				Debug.LogError("[Contract Parser] Contract Guid not set, skipping...\n" + e);
 				root = null;
 				return;
 			}
 
-			showNote = false;
-			title = c.Title;
-			notes = c.Notes;
+			try
+			{
+				title = root.Title;
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Contract Title not set, using type name...\n" + e);
+				title = root.GetType().Name;
+			}
+
+			try
+			{
+				notes = root.Notes;
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Contract Notes not set, blank notes used...\n" + e);
+				notes = "";
+			}
+
+			try
+			{
+				briefing = root.Description;
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Contract Briefing not set, blank briefing used...\n" + e);
+				briefing = "";
+			}
+
+			try
+			{
+				canBeDeclined = root.CanBeDeclined();
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Contract Decline state not set, using true...\n" + e);
+				canBeDeclined = true;
+			}
+
+			try
+			{
+				canBeCancelled = root.CanBeCancelled();
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Contract Cancel state not set, using true...\n" + e);
+				canBeCancelled = true;
+			}
+
+			if (root.Agent != null)
+				agent = root.Agent;
+			else
+				agent = AgentList.Instance.GetAgentRandom();
 
 			if (c.DateDeadline <= 0)
 			{
@@ -55,20 +139,30 @@ namespace ContractParser
 			{
 				duration = root.DateDeadline - Planetarium.GetUniversalTime();
 				//Calculate time in day values using Kerbin or Earth days
-				//daysToExpire = contractScenario.timeInDays(duration);
+				daysToExpire = timeInDays(duration);
 			}
 
 			contractRewards(c);
 			contractPenalties(c);
+			contractAdvance(c);
 
-			totalReward = c.FundsCompletion;
-			foreach (ContractParameter param in c.AllParameters)
-				totalReward += param.FundsCompletion;
+			decPen = HighLogic.CurrentGame.Parameters.Career.RepLossDeclined;
+			decPenString = decPen.ToString("F0");
 
-			//Generate four layers of parameters, check if each is an altitude parameter
+			totalFundsReward = rewards();
+			totalFundsPenalty = penalties();
+			totalRepReward = repRewards();
+			totalSciReward = sciRewards();
+			totalRepPenalty = repPenalties();
+
+			//Generate four layers of parameters
 			for (int i = 0; i < c.ParameterCount; i++)
 			{
 				ContractParameter param = c.GetParameter(i);
+
+				if (param == null)
+					continue;
+
 				addContractParam(param, 0);
 			}
 
@@ -79,87 +173,157 @@ namespace ContractParser
 
 		private void addContractParam(ContractParameter param, int Level)
 		{
-			//string partTest = contractScenario.paramTypeCheck(param);
-			paramList.Add(new parameterContainer(this, param, Level, ""));
-			allParamList.Add(paramList.Last());
+			parameterContainer cc = new parameterContainer(this, param, Level);
+			paramList.Add(cc);
+			allParamList.Add(cc);
 		}
 
 		private void contractRewards(Contract c)
 		{
 			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractReward, (float)c.FundsCompletion, c.ScienceCompletion, c.ReputationCompletion);
 
-			fundsRewString = "";
-			if (c.FundsCompletion != 0)
-				fundsRewString = "+ " + c.FundsCompletion.ToString("N0");
-			float fundsRewStrat = currencyQuery.GetEffectDelta(Currency.Funds);
-			if (fundsRewStrat != 0f)
-				fundsRewString = string.Format("+ {0:N0} ({1:N0})", c.FundsCompletion + fundsRewStrat, fundsRewStrat);
+			fundsRew = (float)c.FundsCompletion;
+			fundsRewStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
-			repRewString = "";
-			if (c.ReputationCompletion != 0)
-				repRewString = "+ " + c.ReputationCompletion.ToString("N0");
-			float repRewStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
-			if (repRewStrat != 0f)
-				repRewString = string.Format("+ {0:N0} ({1:N0})", c.ReputationCompletion + repRewStrat, repRewStrat);
+			if (fundsRewStrat != 0)
+				fundsRewString = string.Format("+ {0:N0} ({1:N0})", fundsRew + fundsRewStrat, fundsRewStrat);
+			else if (fundsRew != 0)
+				fundsRewString = "+ " + fundsRew.ToString("N0");
+			else
+				fundsRewString = "";
 
-			sciRewString = "";
-			if (c.ScienceCompletion != 0)
-				sciRewString = "+ " + c.ScienceCompletion.ToString("N0");
-			float sciRewStrat = currencyQuery.GetEffectDelta(Currency.Science);
-			if (sciRewStrat != 0f)
-			{
-				sciRewString = string.Format("+ {0:N0} ({1:N0})", c.ScienceCompletion + sciRewStrat, sciRewStrat);
-			}
+			repRew = c.ReputationCompletion;
+			repRewStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
+
+			if (repRewStrat != 0)
+				repRewString = string.Format("+ {0:N0} ({1:N0})", repRew + repRewStrat, repRewStrat);
+			else if (repRew != 0)
+				repRewString = "+ " + repRew.ToString("N0");
+			else
+				repRewString = "";
+
+			sciRew = c.ScienceCompletion;
+			sciRewStrat = currencyQuery.GetEffectDelta(Currency.Science);
+
+			if (sciRewStrat != 0)
+				sciRewString = string.Format("+ {0:N0} ({1:N0})", sciRew + sciRewStrat, sciRewStrat);
+			else if (sciRew != 0)
+				sciRewString = "+ " + sciRew.ToString("N0");
+			else
+				sciRewString = "";
 		}
 
 		private void contractPenalties(Contract c)
 		{
 			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractPenalty, (float)c.FundsFailure, 0f, c.ReputationFailure);
 
-			fundsPenString = "";
-			if (c.FundsFailure != 0)
-				fundsPenString = "- " + c.FundsFailure.ToString("N0");
-			float fundsPenStrat = currencyQuery.GetEffectDelta(Currency.Funds);
-			if (fundsPenStrat != 0f)
-			{
-				fundsPenString = string.Format("- {0:N0} ({1:N0})", c.FundsFailure + fundsPenStrat, fundsPenStrat);
-			}
+			fundsPen = (float)c.FundsFailure;
+			fundsPenStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
-			repPenString = "";
-			if (c.ReputationFailure != 0)
-				repPenString = "- " + c.ReputationFailure.ToString("N0");
-			float repPenStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
-			if (repPenStrat != 0f)
-			{
-				repPenString = string.Format("- {0:N0} ({1:N0})", c.ReputationFailure + repPenStrat, repPenStrat);
-			}
+			if (fundsPenStrat != 0)
+				fundsPenString = string.Format("- {0:N0} ({1:N0})", fundsPen + fundsPenStrat, fundsPenStrat);
+			else if (fundsPen != 0)
+				fundsPenString = "- " + fundsPen.ToString("N0");
+			else
+				fundsPenString = "";
+
+			repPen = c.ReputationFailure;
+			repPenStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
+
+			if (repPenStrat != 0)
+				repPenString = string.Format("- {0:N0} ({1:N0})", repPen + repPenStrat, repPenStrat);
+			else if (repPen != 0)
+				repPenString = "- " + repPen.ToString("N0");
+			else
+				repPenString = "";
 		}
 
-		internal void updateContractInfo()
+		private void contractAdvance(Contract c)
+		{
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractAdvance, (float)c.FundsAdvance, 0, 0);
+
+			fundsAdv = (float)c.FundsAdvance;
+			fundsAdvStrat = currencyQuery.GetEffectDelta(Currency.Funds);
+
+			if (fundsAdvStrat != 0)
+				fundsAdvString = string.Format("- {0:N0} ({1:N0})", fundsAdv + fundsAdvStrat, fundsAdvStrat);
+			else if (fundsAdv != 0)
+				fundsAdvString = fundsAdv.ToString("N0");
+			else
+				fundsAdvString = "";
+		}
+
+		private float rewards()
+		{
+			float f = 0;
+			f += fundsRew + fundsRewStrat;
+			f += fundsAdv + fundsAdvStrat;
+			foreach (parameterContainer p in allParamList)
+				f += p.FundsRew + p.FundsRewStrat;
+			return f;
+		}
+
+		private float penalties()
+		{
+			float f = 0;
+			f += fundsPen + fundsPenStrat;
+			foreach (parameterContainer p in allParamList)
+				f += p.FundsPen + p.FundsPenStrat;
+			return f;
+		}
+
+		private float repRewards()
+		{
+			float f = 0;
+			f += repRew + repRewStrat;
+			foreach (parameterContainer p in allParamList)
+				f += p.RepRew + p.RepRewStrat;
+			return f;
+		}
+
+		private float repPenalties()
+		{
+			float f = 0;
+			f += repPen + repPenStrat;
+			foreach (parameterContainer p in allParamList)
+				f += p.RepPen + p.RepPenStrat;
+			return f;
+		}
+
+		private float sciRewards()
+		{
+			float f = 0;
+			f += sciRew + sciRewStrat;
+			foreach (parameterContainer p in allParamList)
+				f += p.SciRew + p.SciRewStrat;
+			return f;
+		}
+
+		public void updateContractInfo()
 		{
 			contractRewards(root);
 			contractPenalties(root);
+			contractAdvance(root);
 		}
 
-		internal void updateFullParamInfo()
+		public void updateFullParamInfo()
 		{
-			totalReward = root.FundsCompletion;
-			foreach (ContractParameter param in root.AllParameters)
-				totalReward += param.FundsCompletion;
-
 			//Clear out all existing parameters and regenerate new ones
-
 			paramList.Clear();
 			allParamList.Clear();
 
 			for (int i = 0; i < root.ParameterCount; i++)
 			{
 				ContractParameter param = root.GetParameter(i);
+
+				if (param == null)
+					continue;
+
 				addContractParam(param, 0);
 			}
 		}
 
-		internal void updateParameterInfo()
+		public void updateParameterInfo()
 		{
 			foreach (parameterContainer pC in allParamList)
 			{
@@ -168,7 +332,7 @@ namespace ContractParser
 			}
 		}
 
-		internal void updateParameterInfo(Type t)
+		public void updateParameterInfo(Type t)
 		{
 			foreach (parameterContainer pC in allParamList)
 			{
@@ -180,9 +344,17 @@ namespace ContractParser
 			}
 		}
 
-		internal void addToParamList(parameterContainer pC)
+		public void addToParamList(parameterContainer pC)
 		{
 			allParamList.Add(pC);
+		}
+
+		public parameterContainer getParameter(int i)
+		{
+			if (paramList.Count > i)
+				return paramList[i];
+
+			return null;
 		}
 
 		private CelestialBody getTargetBody()
@@ -194,69 +366,77 @@ namespace ContractParser
 
 			Type t = root.GetType();
 
-			if (t == typeof(CollectScience))
-				return ((CollectScience)root).TargetBody;
-			else if (t == typeof(ExploreBody))
-				return ((ExploreBody)root).TargetBody;
-			else if (t == typeof(PartTest))
+			try
 			{
-				var fields = typeof(PartTest).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+				if (t == typeof(CollectScience))
+					return ((CollectScience)root).TargetBody;
+				else if (t == typeof(ExploreBody))
+					return ((ExploreBody)root).TargetBody;
+				else if (t == typeof(PartTest))
+				{
+					var fields = typeof(PartTest).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
-				return fields[1].GetValue((PartTest)root) as CelestialBody;
-			}
-			else if (t == typeof(PlantFlag))
-				return ((PlantFlag)root).TargetBody;
-			else if (t == typeof(RecoverAsset))
-			{
-				var fields = typeof(RecoverAsset).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+					return fields[1].GetValue((PartTest)root) as CelestialBody;
+				}
+				else if (t == typeof(PlantFlag))
+					return ((PlantFlag)root).TargetBody;
+				else if (t == typeof(RecoverAsset))
+				{
+					var fields = typeof(RecoverAsset).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
-				return fields[0].GetValue((RecoverAsset)root) as CelestialBody;
-			}
-			else if (t == typeof(GrandTour))
-				return ((GrandTour)root).TargetBodies.LastOrDefault();
-			else if (t == typeof(ARMContract))
-			{
-				var fields = typeof(ARMContract).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+					return fields[0].GetValue((RecoverAsset)root) as CelestialBody;
+				}
+				else if (t == typeof(GrandTour))
+					return ((GrandTour)root).TargetBodies.LastOrDefault();
+				else if (t == typeof(ARMContract))
+				{
+					var fields = typeof(ARMContract).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
-				return fields[0].GetValue((ARMContract)root) as CelestialBody;
-			}
-			else if (t == typeof(BaseContract))
-				return ((BaseContract)root).targetBody;
-			else if (t == typeof(ISRUContract))
-				return ((ISRUContract)root).targetBody;
-			else if (t == typeof(SatelliteContract))
-			{
-				SpecificOrbitParameter p = root.GetParameter<SpecificOrbitParameter>();
+					return fields[0].GetValue((ARMContract)root) as CelestialBody;
+				}
+				else if (t == typeof(BaseContract))
+					return ((BaseContract)root).targetBody;
+				else if (t == typeof(ISRUContract))
+					return ((ISRUContract)root).targetBody;
+				else if (t == typeof(SatelliteContract))
+				{
+					SpecificOrbitParameter p = root.GetParameter<SpecificOrbitParameter>();
 
-				if (p == null)
+					if (p == null)
+						return null;
+
+					return p.TargetBody;
+				}
+				else if (t == typeof(StationContract))
+					return ((StationContract)root).targetBody;
+				else if (t == typeof(SurveyContract))
+					return ((SurveyContract)root).targetBody;
+				else if (t == typeof(TourismContract))
 					return null;
+				else if (t == typeof(WorldFirstContract))
+				{
+					ProgressTrackingParameter p = root.GetParameter<ProgressTrackingParameter>();
 
-				return p.TargetBody;
+					if (p == null)
+						return null;
+
+					var fields = typeof(ProgressTrackingParameter).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+
+					var milestone = fields[0].GetValue(p) as ProgressMilestone;
+
+					if (milestone == null)
+						return null;
+
+					return milestone.body;
+				}
+				else
+					checkTitle = true;
 			}
-			else if (t == typeof(StationContract))
-				return ((StationContract)root).targetBody;
-			else if (t == typeof(SurveyContract))
-				return ((SurveyContract)root).targetBody;
-			else if (t == typeof(TourismContract))
+			catch (Exception e)
+			{
+				Debug.LogError("[Contract Parser] Error Detecting Target Celestial Body...\n" + e);
 				return null;
-			else if (t == typeof(WorldFirstContract))
-			{
-				ProgressTrackingParameter p = root.GetParameter<ProgressTrackingParameter>();
-
-				if (p == null)
-					return null;
-
-				var fields = typeof(ProgressTrackingParameter).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
-
-				var milestone = fields[0].GetValue(p) as ProgressMilestone;
-
-				if (milestone == null)
-					return null;
-
-				return milestone.body;
 			}
-			else
-				checkTitle = true;
 
 			if (checkTitle)
 			{
@@ -287,7 +467,35 @@ namespace ContractParser
 			completed = root.DateFinished;
 		}
 
-		public Contract Contract
+		private string timeInDays(double D)
+		{
+			if (D <= 0)
+				return "----";
+
+			int[] time = KSPUtil.GetDateFromUT((int)D);
+			StringBuilder s = new StringBuilder();
+
+			if (time[4] > 0)
+				s.Append(string.Format("{0}y", time[4]));
+			if (time[3] > 0)
+			{
+				if (!string.IsNullOrEmpty(s.ToString()))
+					s.Append(" ");
+				s.Append(string.Format("{0}d", time[3]));
+			}
+			if (time[4] <= 0 && time[2] > 0)
+			{
+				if (!string.IsNullOrEmpty(s.ToString()))
+					s.Append(" ");
+				s.Append(string.Format("{0}h", time[2]));
+			}
+			if (time[4] <= 0 && time[3] <= 0 && time[2] <= 0 && time[1] > 0)
+				s.Append(string.Format("{0}m", time[1]));
+
+			return s.ToString();
+		}
+
+		public Contract Root
 		{
 			get { return root; }
 		}
@@ -300,11 +508,6 @@ namespace ContractParser
 		public int ParameterCount
 		{
 			get { return allParamList.Count; }
-		}
-
-		public double TotalReward
-		{
-			get { return totalReward; }
 		}
 
 		public double Duration
@@ -337,9 +540,89 @@ namespace ContractParser
 			internal set { notes = value; }
 		}
 
+		public bool CanBeDeclined
+		{
+			get { return canBeDeclined; }
+		}
+
+		public bool CanBeCancelled
+		{
+			get { return canBeCancelled; }
+		}
+
+		public float DecPen
+		{
+			get { return decPen; }
+		}
+
+		public string DecPenString
+		{
+			get { return decPenString; }
+		}
+
 		public string TargetPlanet
 		{
 			get { return targetPlanet; }
+		}
+
+		public float FundsAdv
+		{
+			get { return fundsAdv; }
+		}
+
+		public float FundsRew
+		{
+			get { return fundsRew; }
+		}
+
+		public float FundsPen
+		{
+			get { return fundsPen; }
+		}
+
+		public float RepRew
+		{
+			get { return repRew; }
+		}
+
+		public float RepPen
+		{
+			get { return repPen; }
+		}
+
+		public float SciRew
+		{
+			get { return sciRew; }
+		}
+
+		public float FundsAdvStrat
+		{
+			get { return fundsAdvStrat; }
+		}
+
+		public float FundsRewStrat
+		{
+			get { return fundsRewStrat; }
+		}
+
+		public float FundsPenStrat
+		{
+			get { return fundsPenStrat; }
+		}
+
+		public float RepRewStrat
+		{
+			get { return repRewStrat; }
+		}
+
+		public float RepPenStrat
+		{
+			get { return repPenStrat; }
+		}
+
+		public float SciRewStrat
+		{
+			get { return sciRewStrat; }
 		}
 
 		public string FundsRewString
@@ -350,6 +633,11 @@ namespace ContractParser
 		public string FundsPenString
 		{
 			get { return fundsPenString; }
+		}
+
+		public string FundsAdvString
+		{
+			get { return fundsAdvString; }
 		}
 
 		public string RepRewString
@@ -367,6 +655,31 @@ namespace ContractParser
 			get { return sciRewString; }
 		}
 
+		public float TotalReward
+		{
+			get { return totalFundsReward; }
+		}
+
+		public float TotalPenalty
+		{
+			get { return totalFundsPenalty; }
+		}
+
+		public float TotalRepReward
+		{
+			get { return totalRepReward; }
+		}
+
+		public float TotalRepPenalty
+		{
+			get { return totalRepPenalty; }
+		}
+
+		public float TotalSciReward
+		{
+			get { return totalSciReward; }
+		}
+
 		public double Expire
 		{
 			get { return expire; }
@@ -378,6 +691,11 @@ namespace ContractParser
 		}
 
 		public double Finished
+		{
+			get { return completed; }
+		}
+
+		public double Completed
 		{
 			get { return completed; }
 		}
