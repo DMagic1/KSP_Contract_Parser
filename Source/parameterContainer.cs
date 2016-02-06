@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Contracts;
+using FinePrint;
 using FinePrint.Contracts;
 using FinePrint.Contracts.Parameters;
 using UnityEngine;
@@ -47,6 +48,7 @@ namespace ContractParser
 		private float fundsRew, fundsPen, repRew, repPen, sciRew;
 		private float fundsRewStrat, fundsPenStrat, repRewStrat, repPenStrat, sciRewStrat;
 		private string fundsRewString, fundsPenString, repRewString, repPenString, sciRewString;
+		private Waypoint waypoint;
 		private List<parameterContainer> paramList = new List<parameterContainer>();
 
 		public parameterContainer(contractContainer Root, ContractParameter cP, int Level)
@@ -75,8 +77,10 @@ namespace ContractParser
 			}
 
 			level = Level;	
-			paramRewards(cP);
-			paramPenalties(cP);
+			paramRewards();
+			paramPenalties();
+
+			waypoint = checkForWaypoint();
 
 			customNotes = setCustomNotes();
 
@@ -277,11 +281,45 @@ namespace ContractParser
 			return l;
 		}
 
-		internal void paramRewards(ContractParameter cP)
+		private Waypoint checkForWaypoint()
 		{
-			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractReward, (float)cP.FundsCompletion, cP.ScienceCompletion, cP.ReputationCompletion);
+			Waypoint p = null;
 
-			fundsRew = (float)cP.FundsCompletion;
+			if (cParam.GetType() == typeof(SurveyWaypointParameter))
+			{
+				SurveyWaypointParameter s = (SurveyWaypointParameter)cParam;
+
+				if (s.State != ParameterState.Incomplete)
+					return p;
+
+				return s.wp;
+			}
+
+			else if (cParam.GetType() == typeof(StationaryPointParameter))
+			{
+				StationaryPointParameter s = (StationaryPointParameter)cParam;
+				if (s.State != ParameterState.Incomplete)
+					return p;
+
+				try
+				{
+					var field = (typeof(StationaryPointParameter)).GetFields(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+					p = (Waypoint)field.GetValue(s);
+				}
+				catch (Exception e)
+				{
+					Debug.Log(string.Format("[Contract Parser] Error While Assigning FinePrint Stationary Waypoint Object\n{0}", e));
+				}
+			}
+
+			return p;
+		}
+
+		internal void paramRewards()
+		{
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractReward, (float)cParam.FundsCompletion, cParam.ScienceCompletion, cParam.ReputationCompletion);
+
+			fundsRew = (float)cParam.FundsCompletion;
 			fundsRewStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
 			if (fundsRewStrat != 0)
@@ -291,7 +329,7 @@ namespace ContractParser
 			else
 				fundsRewString = "";
 
-			repRew = cP.ReputationCompletion;
+			repRew = cParam.ReputationCompletion;
 			repRewStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
 
 			if (repRewStrat != 0)
@@ -301,7 +339,7 @@ namespace ContractParser
 			else
 				repRewString = "";
 
-			sciRew = cP.ScienceCompletion;
+			sciRew = cParam.ScienceCompletion;
 			sciRewStrat = currencyQuery.GetEffectDelta(Currency.Science);
 
 			if (sciRewStrat != 0)
@@ -312,11 +350,11 @@ namespace ContractParser
 				sciRewString = "";
 		}
 
-		internal void paramPenalties(ContractParameter cP)
+		internal void paramPenalties()
 		{
-			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractPenalty, (float)cP.FundsFailure, 0f, cP.ReputationFailure);
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractPenalty, (float)cParam.FundsFailure, 0f, cParam.ReputationFailure);
 
-			fundsPen = (float)cP.FundsFailure;
+			fundsPen = (float)cParam.FundsFailure;
 			fundsPenStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
 			if (fundsPenStrat != 0)
@@ -326,7 +364,7 @@ namespace ContractParser
 			else
 				fundsPenString = "";
 
-			repPen = cP.ReputationFailure;
+			repPen = cParam.ReputationFailure;
 			repPenStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
 
 			if (repPenStrat != 0)
@@ -343,9 +381,27 @@ namespace ContractParser
 			root.addToParamList(paramList.Last());
 		}
 
+		public int ParameterCount
+		{
+			get { return paramList.Count; }
+		}
+
+		public parameterContainer getParameter(int index)
+		{
+			if (paramList.Count > index)
+				return paramList[index];
+
+			return null;
+		}
+
 		public ContractParameter CParam
 		{
 			get { return cParam; }
+		}
+
+		public Waypoint Way
+		{
+			get { return waypoint; }
 		}
 
 		public bool ShowNote
