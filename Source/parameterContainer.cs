@@ -351,16 +351,16 @@ namespace ContractParser
 		public bool ShowNote
 		{
 			get { return showNote; }
-			internal set { showNote = value; }
+			set { showNote = value; }
 		}
 
 		public string Title
 		{
 			get { return title; }
-			internal set { title = value; }
+			set { title = value; }
 		}
 
-		public string Notes(bool custom)
+		public string Notes(bool custom = false)
 		{
 			if (custom)
 				return notes + customNotes;
