@@ -1,0 +1,5 @@
+Contract Parser is a required compenent of Contracts Window + and CapCom.
+
+It is used to calculate and store values for contracts.
+
+DO NOT remove Contract Parser unless you have already removed both CapCom and Contracts Window +.
