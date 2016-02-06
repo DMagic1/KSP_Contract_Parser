@@ -59,6 +59,12 @@ namespace ContractParser
 			GameEvents.Contract.onFinished.Add(onFinished);
 			GameEvents.Contract.onOffered.Add(onOffered);
 			GameEvents.Contract.onContractsLoaded.Add(onContractsLoaded);
+			GameEvents.onLevelWasLoaded.Add(onSceneChange);
+		}
+
+		private void onSceneChange(GameScenes scene)
+		{
+			contractParser.Loaded = false;
 		}
 
 		private void onParamChange(Contract c, ContractParameter p)
