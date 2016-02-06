@@ -25,4 +25,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 [assembly: AssemblyInformationalVersion("v1.0")]
-[assembly: KSPAssembly("Contract Parser", 1, 0)]
+[assembly: KSPAssembly("Contract Parser", 0, 1)]
