@@ -42,10 +42,14 @@ namespace ContractParser
 		private static Dictionary<Guid, contractContainer> failedContracts = new Dictionary<Guid, contractContainer>();
 		private static Dictionary<Guid, contractContainer> declinedContracts = new Dictionary<Guid, contractContainer>();
 
+		private static bool loaded;
+
 		public static IEnumerator loadContracts()
 		{
 			if (HighLogic.CurrentGame.Mode != Game.Modes.CAREER)
 				yield break;
+
+			loaded = false;
 
 			int i = 0;
 
@@ -55,6 +59,8 @@ namespace ContractParser
 				i++;
 				yield return null;
 			}
+
+			Debug.Log("[Contract Parser] Loading All Contracts...");
 
 			activeContracts.Clear();
 			offeredContracts.Clear();
@@ -139,6 +145,10 @@ namespace ContractParser
 						continue;
 				}
 			}
+
+			loaded = true;
+
+			Debug.Log("[Contract Parser] Finished Loading All Contracts");
 		}
 
 		public static int ActiveContractCount
@@ -369,6 +379,12 @@ namespace ContractParser
 		public static List<contractContainer> getDeclinedContracts
 		{
 			get { return declinedContracts.Values.ToList(); }
+		}
+
+		public static bool Loaded
+		{
+			get { return loaded; }
+			internal set { loaded = value; }
 		}
     }
 }
