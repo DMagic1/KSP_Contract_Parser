@@ -513,31 +513,31 @@ namespace ContractParser
 		public double Duration
 		{
 			get { return duration; }
-			internal set { duration = value; }
+			set { duration = value; }
 		}
 
 		public bool ShowNote
 		{
 			get { return showNote; }
-			internal set { showNote = value; }
+			set { showNote = value; }
 		}
 
 		public string DaysToExpire
 		{
 			get { return daysToExpire; }
-			internal set { daysToExpire = value; }
+			set { daysToExpire = value; }
 		}
 
 		public string Title
 		{
 			get { return title; }
-			internal set { title = value; }
+			set { title = value; }
 		}
 
 		public string Notes
 		{
 			get { return notes; }
-			internal set { notes = value; }
+			set { notes = value; }
 		}
 
 		public bool CanBeDeclined
