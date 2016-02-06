@@ -51,6 +51,7 @@ namespace ContractParser
 
 			DontDestroyOnLoad(gameObject);
 
+			Debug.Log("[Contract Parser] Starting Contract Parsing Controller...");
 			initialized = true;
 
 			GameEvents.Contract.onParameterChange.Add(onParamChange);
@@ -59,10 +60,10 @@ namespace ContractParser
 			GameEvents.Contract.onFinished.Add(onFinished);
 			GameEvents.Contract.onOffered.Add(onOffered);
 			GameEvents.Contract.onContractsLoaded.Add(onContractsLoaded);
-			GameEvents.onLevelWasLoaded.Add(onSceneChange);
+			GameEvents.onGameSceneSwitchRequested.Add(onSceneChange);
 		}
 
-		private void onSceneChange(GameScenes scene)
+		private void onSceneChange(GameEvents.FromToAction<GameScenes, GameScenes> g)
 		{
 			contractParser.Loaded = false;
 		}
