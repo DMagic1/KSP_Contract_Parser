@@ -142,9 +142,9 @@ namespace ContractParser
 				daysToExpire = timeInDays(duration);
 			}
 
-			contractRewards(c);
-			contractPenalties(c);
-			contractAdvance(c);
+			contractRewards();
+			contractPenalties();
+			contractAdvance();
 
 			decPen = HighLogic.CurrentGame.Parameters.Career.RepLossDeclined;
 			decPenString = decPen.ToString("F0");
@@ -178,11 +178,11 @@ namespace ContractParser
 			allParamList.Add(cc);
 		}
 
-		private void contractRewards(Contract c)
+		private void contractRewards()
 		{
-			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractReward, (float)c.FundsCompletion, c.ScienceCompletion, c.ReputationCompletion);
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractReward, (float)root.FundsCompletion, root.ScienceCompletion, root.ReputationCompletion);
 
-			fundsRew = (float)c.FundsCompletion;
+			fundsRew = (float)root.FundsCompletion;
 			fundsRewStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
 			if (fundsRewStrat != 0)
@@ -192,7 +192,7 @@ namespace ContractParser
 			else
 				fundsRewString = "";
 
-			repRew = c.ReputationCompletion;
+			repRew = root.ReputationCompletion;
 			repRewStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
 
 			if (repRewStrat != 0)
@@ -202,7 +202,7 @@ namespace ContractParser
 			else
 				repRewString = "";
 
-			sciRew = c.ScienceCompletion;
+			sciRew = root.ScienceCompletion;
 			sciRewStrat = currencyQuery.GetEffectDelta(Currency.Science);
 
 			if (sciRewStrat != 0)
@@ -213,11 +213,11 @@ namespace ContractParser
 				sciRewString = "";
 		}
 
-		private void contractPenalties(Contract c)
+		private void contractPenalties()
 		{
-			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractPenalty, (float)c.FundsFailure, 0f, c.ReputationFailure);
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractPenalty, (float)root.FundsFailure, 0f, root.ReputationFailure);
 
-			fundsPen = (float)c.FundsFailure;
+			fundsPen = (float)root.FundsFailure;
 			fundsPenStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
 			if (fundsPenStrat != 0)
@@ -227,7 +227,7 @@ namespace ContractParser
 			else
 				fundsPenString = "";
 
-			repPen = c.ReputationFailure;
+			repPen = root.ReputationFailure;
 			repPenStrat = currencyQuery.GetEffectDelta(Currency.Reputation);
 
 			if (repPenStrat != 0)
@@ -238,11 +238,11 @@ namespace ContractParser
 				repPenString = "";
 		}
 
-		private void contractAdvance(Contract c)
+		private void contractAdvance()
 		{
-			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractAdvance, (float)c.FundsAdvance, 0, 0);
+			CurrencyModifierQuery currencyQuery = CurrencyModifierQuery.RunQuery(TransactionReasons.ContractAdvance, (float)root.FundsAdvance, 0, 0);
 
-			fundsAdv = (float)c.FundsAdvance;
+			fundsAdv = (float)root.FundsAdvance;
 			fundsAdvStrat = currencyQuery.GetEffectDelta(Currency.Funds);
 
 			if (fundsAdvStrat != 0)
@@ -301,9 +301,9 @@ namespace ContractParser
 
 		public void updateContractInfo()
 		{
-			contractRewards(root);
-			contractPenalties(root);
-			contractAdvance(root);
+			contractRewards();
+			contractPenalties();
+			contractAdvance();
 		}
 
 		public void updateFullParamInfo()
@@ -327,8 +327,8 @@ namespace ContractParser
 		{
 			foreach (parameterContainer pC in allParamList)
 			{
-				pC.paramRewards(pC.CParam);
-				pC.paramPenalties(pC.CParam);
+				pC.paramRewards();
+				pC.paramPenalties();
 			}
 		}
 
@@ -338,8 +338,8 @@ namespace ContractParser
 			{
 				if (pC.CParam.GetType() == t)
 				{
-					pC.paramRewards(pC.CParam);
-					pC.paramPenalties(pC.CParam);
+					pC.paramRewards();
+					pC.paramPenalties();
 				}
 			}
 		}
@@ -500,6 +500,16 @@ namespace ContractParser
 			get { return root; }
 		}
 
+		public Agent RootAgent
+		{
+			get { return agent; }
+		}
+
+		public string Briefing
+		{
+			get { return briefing; }
+		}
+
 		public Guid ID
 		{
 			get { return id; }
@@ -508,6 +518,27 @@ namespace ContractParser
 		public int ParameterCount
 		{
 			get { return allParamList.Count; }
+		}
+
+		public int FirstLevelParameterCount
+		{
+			get { return paramList.Count; }
+		}
+
+		public parameterContainer getParameterFull(int index)
+		{
+			if (allParamList.Count > index)
+				return allParamList[index];
+
+			return null;
+		}
+
+		public parameterContainer getParameterLevelOne(int index)
+		{
+			if (paramList.Count > index)
+				return paramList[index];
+
+			return null;
 		}
 
 		public double Duration
