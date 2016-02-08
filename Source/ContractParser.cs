@@ -42,6 +42,8 @@ namespace ContractParser
 		private static Dictionary<Guid, contractContainer> failedContracts = new Dictionary<Guid, contractContainer>();
 		private static Dictionary<Guid, contractContainer> declinedContracts = new Dictionary<Guid, contractContainer>();
 
+		public static EventVoid onContractsParsed = new EventVoid("onContractsParsed");
+
 		private static bool loaded;
 
 		public static IEnumerator loadContracts()
@@ -147,6 +149,8 @@ namespace ContractParser
 			}
 
 			loaded = true;
+
+			onContractsParsed.Fire();
 
 			Debug.Log("[Contract Parser] Finished Loading All Contracts");
 		}
