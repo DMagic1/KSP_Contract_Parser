@@ -43,6 +43,7 @@ namespace ContractParser
 		private static Dictionary<Guid, contractContainer> declinedContracts = new Dictionary<Guid, contractContainer>();
 
 		public static EventVoid onContractsParsed = new EventVoid("onContractsParsed");
+		public static EventData<Contract> onContractStateChange = new EventData<Contract>("onContractStateChange");
 
 		private static bool loaded;
 

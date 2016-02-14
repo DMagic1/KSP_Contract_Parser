@@ -97,6 +97,8 @@ namespace ContractParser
 			contractParser.removeOfferedContract(cc, true);
 
 			contractParser.addActiveContract(cc, true);
+
+			contractParser.onContractStateChange.Fire(c);
 		}
 
 		private void onDeclined(Contract c)
@@ -113,6 +115,8 @@ namespace ContractParser
 				return;
 
 			contractParser.removeOfferedContract(cc, true);
+
+			contractParser.onContractStateChange.Fire(c);
 		}
 
 		private void onFinished(Contract c)
@@ -137,6 +141,8 @@ namespace ContractParser
 			contractParser.removeActiveContract(cc);
 			if (c.ContractState == Contract.State.Completed)
 				contractParser.addCompletedContract(cc, true);
+
+			contractParser.onContractStateChange.Fire(c);
 		}
 
 		private void onOffered(Contract c)
@@ -153,6 +159,8 @@ namespace ContractParser
 				return;
 
 			contractParser.addOfferedContract(cc, true);
+
+			contractParser.onContractStateChange.Fire(c);
 		}
 
 		private void onContractsLoaded()
