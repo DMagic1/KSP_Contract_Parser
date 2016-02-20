@@ -130,7 +130,7 @@ namespace ContractParser
 			contractContainer cc = contractParser.getActiveContract(c.ContractGuid);
 
 			if (cc == null)
-				cc = contractParser.getOfferedContract(c.ContractGuid, true);
+				cc = contractParser.getOfferedContract(c.ContractGuid);
 
 			if (cc == null)
 				return;
