@@ -47,7 +47,7 @@ namespace ContractParser
 		private float totalFundsReward, totalRepReward, totalSciReward;
 		private float totalFundsPenalty, totalRepPenalty;
 		private double expire, duration, deadline, completed;
-		private bool showNote, canBeDeclined, canBeCancelled;
+		private bool showNote, canBeDeclined, canBeCancelled, initialized;
 		private string briefing;
 		private string daysToExpire;
 		private string targetPlanet;
@@ -545,6 +545,12 @@ namespace ContractParser
 		{
 			get { return duration; }
 			set { duration = value; }
+		}
+
+		public bool Initialized
+		{
+			get { return initialized; }
+			set { initialized = value; }
 		}
 
 		public bool ShowNote
