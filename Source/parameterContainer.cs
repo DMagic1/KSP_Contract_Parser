@@ -233,7 +233,7 @@ namespace ContractParser
 				if (string.IsNullOrEmpty(s))
 					continue;
 
-				AvailablePart p = PartLoader.getPartInfoByName(s);
+				AvailablePart p = PartLoader.getPartInfoByName(s.Replace('_', '.'));
 
 				if (p == null)
 					continue;
