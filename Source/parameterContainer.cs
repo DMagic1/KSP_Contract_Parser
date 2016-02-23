@@ -178,6 +178,9 @@ namespace ContractParser
 			}
 			else if (pType == typeof(VesselSystemsParameter))
 			{
+				if (!((VesselSystemsParameter)cParam).requireNew)
+					return "";
+
 				List<string> l = new List<string>();
 
 				var modFields = pType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
