@@ -142,6 +142,8 @@ namespace ContractParser
 				daysToExpire = timeInDays(duration);
 			}
 
+			updateTimeValues();
+
 			contractRewards();
 			contractPenalties();
 			contractAdvance();
