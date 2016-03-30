@@ -474,7 +474,7 @@ namespace ContractParser
 			if (D <= 0)
 				return "----";
 
-			int[] time = KSPUtil.GetDateFromUT((int)D);
+			int[] time = ((KSPUtil.DefaultDateTimeFormatter)KSPUtil.dateTimeFormatter).GetDateFromUT((int)D);
 			StringBuilder s = new StringBuilder();
 
 			if (time[4] > 0)
