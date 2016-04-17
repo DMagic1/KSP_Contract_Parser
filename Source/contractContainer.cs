@@ -417,14 +417,9 @@ namespace ContractParser
 					return null;
 				else if (t == typeof(WorldFirstContract))
 				{
-					ProgressTrackingParameter p = root.GetParameter<ProgressTrackingParameter>();
+					var fields = typeof(WorldFirstContract).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
-					if (p == null)
-						return null;
-
-					var fields = typeof(ProgressTrackingParameter).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
-
-					var milestone = fields[0].GetValue(p) as ProgressMilestone;
+					var milestone = fields[0].GetValue((WorldFirstContract)root) as ProgressMilestone;
 
 					if (milestone == null)
 						return null;
