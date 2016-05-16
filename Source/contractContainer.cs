@@ -60,6 +60,8 @@ namespace ContractParser
 		private List<parameterContainer> paramList = new List<parameterContainer>();
 		private List<parameterContainer> allParamList = new List<parameterContainer>();
 
+		private static KSPUtil.DefaultDateTimeFormatter timeFormatter;
+
 		public contractContainer(Contract c)
 		{
 			root = c;
@@ -464,12 +466,15 @@ namespace ContractParser
 			completed = root.DateFinished;
 		}
 
-		private string timeInDays(double D)
+		public string timeInDays(double D)
 		{
 			if (D <= 0)
 				return "----";
 
-			int[] time = ((KSPUtil.DefaultDateTimeFormatter)KSPUtil.dateTimeFormatter).GetDateFromUT((int)D);
+			if (timeFormatter == null)
+				timeFormatter = new KSPUtil.DefaultDateTimeFormatter();
+
+			int[] time = timeFormatter.GetDateFromUT((int)D);
 			StringBuilder s = new StringBuilder();
 
 			if (time[4] > 0)
