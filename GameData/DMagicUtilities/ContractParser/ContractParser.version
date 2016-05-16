@@ -1,7 +1,7 @@
 {
      "NAME":"Contract Parser",
 	 "URL":"https://raw.githubusercontent.com/DMagic1/KSP_Contract_Parser/master/GameData/DMagicUtilities/ContractParser/ContractParser.version",
-     "DOWNLOAD":"https://github.com/DMagic1/KSP_Contract_Parser/releases/tag/3.0",
+     "DOWNLOAD":"https://github.com/DMagic1/KSP_Contract_Parser/releases/tag/4.0",
      "GITHUB":{
          "USERNAME":"DMagic1",
          "REPOSITORY":"KSP_Contract_Parser",
@@ -10,7 +10,7 @@
      "VERSION":{
          "MAJOR":1,
          "MINOR":0,
-         "PATCH":3,
+         "PATCH":4,
          "BUILD":0
      },
      "KSP_VERSION":{
