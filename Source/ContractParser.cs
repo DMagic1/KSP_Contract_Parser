@@ -36,14 +36,15 @@ namespace ContractParser
 {
     public static class contractParser
     {
-		private static Dictionary<Guid, contractContainer> activeContracts = new Dictionary<Guid, contractContainer>();
-		private static Dictionary<Guid, contractContainer> offeredContracts = new Dictionary<Guid, contractContainer>();
-		private static Dictionary<Guid, contractContainer> completedContracts = new Dictionary<Guid, contractContainer>();
-		private static Dictionary<Guid, contractContainer> failedContracts = new Dictionary<Guid, contractContainer>();
-		private static Dictionary<Guid, contractContainer> declinedContracts = new Dictionary<Guid, contractContainer>();
+		private static DictionaryValueList<Guid, contractContainer> activeContracts = new DictionaryValueList<Guid, contractContainer>();
+		private static DictionaryValueList<Guid, contractContainer> offeredContracts = new DictionaryValueList<Guid, contractContainer>();
+		private static DictionaryValueList<Guid, contractContainer> completedContracts = new DictionaryValueList<Guid, contractContainer>();
+		private static DictionaryValueList<Guid, contractContainer> failedContracts = new DictionaryValueList<Guid, contractContainer>();
+		private static DictionaryValueList<Guid, contractContainer> declinedContracts = new DictionaryValueList<Guid, contractContainer>();
 
 		public static EventVoid onContractsParsed = new EventVoid("onContractsParsed");
 		public static EventData<Contract> onContractStateChange = new EventData<Contract>("onContractStateChange");
+		public static EventData<Contract, ContractParameter> onParameterAdded = new EventData<Contract, ContractParameter>("onContractParameterAdded");
 
 		private static bool loaded;
 
@@ -149,11 +150,47 @@ namespace ContractParser
 				}
 			}
 
+			if (contractReflection.CCLoaded)
+				RefreshCCOfferedContracts();
+
 			loaded = true;
 
 			onContractsParsed.Fire();
 
 			Debug.Log("[Contract Parser] Finished Loading All Contracts");
+		}
+
+		public static void RefreshCCOfferedContracts()
+		{
+			if (contractReflection.CCLoaded)
+			{
+				List<Contract> ccPending = new List<Contract>();
+
+				ccPending = contractReflection.pendingContracts();
+
+				if (ccPending != null)
+				{
+					int l = ccPending.Count;
+
+					for (int i = 0; i < l; i++)
+					{
+						Contract c = ccPending[i];
+
+						if (c == null)
+							continue;
+
+						if (c.ContractState != Contract.State.Offered)
+							continue;
+
+						contractContainer cc = new contractContainer(c);
+
+						if (cc == null)
+							continue;
+
+						addOfferedContract(cc);
+					}
+				}
+			}
 		}
 
 		public static int ActiveContractCount
@@ -163,7 +200,7 @@ namespace ContractParser
 
 		public static contractContainer getActiveContract(Guid id, bool warn = false)
 		{
-			if (activeContracts.ContainsKey(id))
+			if (activeContracts.Contains(id))
 				return activeContracts[id];
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Active Contract Of ID: [{0}] Found", id));
@@ -174,7 +211,7 @@ namespace ContractParser
 		public static contractContainer getActiveContract(int index, bool warn = false)
 		{
 			if (activeContracts.Count > index)
-				return activeContracts.ElementAt(index).Value;
+				return activeContracts.At(index);
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Active Contract At Index: [{0}] Found", index));
 
@@ -183,7 +220,7 @@ namespace ContractParser
 
 		public static bool addActiveContract(contractContainer c, bool warn = false)
 		{
-			if (!activeContracts.ContainsKey(c.ID))
+			if (!activeContracts.Contains(c.ID))
 			{
 				activeContracts.Add(c.ID, c);
 				return true;
@@ -196,7 +233,7 @@ namespace ContractParser
 
 		public static bool removeActiveContract(contractContainer c, bool warn = false)
 		{
-			if (activeContracts.ContainsKey(c.ID))
+			if (activeContracts.Contains(c.ID))
 			{
 				activeContracts.Remove(c.ID);
 				return true;
@@ -214,7 +251,7 @@ namespace ContractParser
 
 		public static contractContainer getOfferedContract(Guid id, bool warn = false)
 		{
-			if (offeredContracts.ContainsKey(id))
+			if (offeredContracts.Contains(id))
 				return offeredContracts[id];
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Offered Contract Of ID: [{0}] Found", id));
@@ -225,7 +262,7 @@ namespace ContractParser
 		public static contractContainer getOfferedContract(int index, bool warn = false)
 		{
 			if (offeredContracts.Count > index)
-				return offeredContracts.ElementAt(index).Value;
+				return offeredContracts.At(index);
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Offered Contract At Index: [{0}] Found", index));
 
@@ -234,7 +271,7 @@ namespace ContractParser
 
 		public static bool addOfferedContract(contractContainer c, bool warn = false)
 		{
-			if (!offeredContracts.ContainsKey(c.ID))
+			if (!offeredContracts.Contains(c.ID))
 			{
 				offeredContracts.Add(c.ID, c);
 				return true;
@@ -247,7 +284,7 @@ namespace ContractParser
 
 		public static bool removeOfferedContract(contractContainer c, bool warn = false)
 		{
-			if (offeredContracts.ContainsKey(c.ID))
+			if (offeredContracts.Contains(c.ID))
 			{
 				offeredContracts.Remove(c.ID);
 				return true;
@@ -265,7 +302,7 @@ namespace ContractParser
 
 		public static contractContainer getCompletedContract(Guid id, bool warn = false)
 		{
-			if (completedContracts.ContainsKey(id))
+			if (completedContracts.Contains(id))
 				return completedContracts[id];
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Completed Contract Of ID: [{0}] Found", id));
@@ -276,7 +313,7 @@ namespace ContractParser
 		public static contractContainer getCompletedContract(int index, bool warn = false)
 		{
 			if (completedContracts.Count > index)
-				return completedContracts.ElementAt(index).Value;
+				return completedContracts.At(index);
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Completed Contract At Index: [{0}] Found", index));
 
@@ -285,7 +322,7 @@ namespace ContractParser
 
 		public static bool addCompletedContract(contractContainer c, bool warn = false)
 		{
-			if (!completedContracts.ContainsKey(c.ID))
+			if (!completedContracts.Contains(c.ID))
 			{
 				completedContracts.Add(c.ID, c);
 				return true;
@@ -298,7 +335,7 @@ namespace ContractParser
 
 		public static bool removeCompletedContract(contractContainer c, bool warn = false)
 		{
-			if (completedContracts.ContainsKey(c.ID))
+			if (completedContracts.Contains(c.ID))
 			{
 				completedContracts.Remove(c.ID);
 				return true;
@@ -316,7 +353,7 @@ namespace ContractParser
 
 		public static contractContainer getFailedContract(Guid id, bool warn = false)
 		{
-			if (failedContracts.ContainsKey(id))
+			if (failedContracts.Contains(id))
 				return failedContracts[id];
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Failed Contract Of ID: [{0}] Found", id));
@@ -327,7 +364,7 @@ namespace ContractParser
 		public static contractContainer getFailedContract(int index, bool warn = false)
 		{
 			if (failedContracts.Count > index)
-				return failedContracts.ElementAt(index).Value;
+				return failedContracts.At(index);
 			else if (warn)
 				Debug.Log(string.Format("[Contract Parser] No Failed Contract At Index: [{0}] Found", index));
 
@@ -336,7 +373,7 @@ namespace ContractParser
 
 		public static bool addFailedContract(contractContainer c, bool warn = false)
 		{
-			if (!failedContracts.ContainsKey(c.ID))
+			if (!failedContracts.Contains(c.ID))
 			{
 				failedContracts.Add(c.ID, c);
 				return true;
@@ -349,7 +386,7 @@ namespace ContractParser
 
 		public static bool removeFailedContract(contractContainer c, bool warn = false)
 		{
-			if (failedContracts.ContainsKey(c.ID))
+			if (failedContracts.Contains(c.ID))
 			{
 				failedContracts.Remove(c.ID);
 				return true;
