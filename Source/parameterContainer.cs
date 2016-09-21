@@ -129,7 +129,7 @@ namespace ContractParser
 
 						s += "The following parts are acceptable:";
 
-						for (int i = 0; i < titles.Count; i++)
+						for (int i = titles.Count - 1; i >= 0; i--)
 						{
 							string t = titles[i];
 
@@ -138,14 +138,9 @@ namespace ContractParser
 					}
 				}
 
-				var modFields = pType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
-
-				if (modFields == null)
-					return "";
-
 				try
 				{
-					l = (List<string>)modFields[5].GetValue((PartRequestParameter)cParam);
+					l = (List<string>)partFields[5].GetValue((PartRequestParameter)cParam);
 				}
 				catch (Exception e)
 				{
@@ -167,7 +162,7 @@ namespace ContractParser
 							s = "The following parts are acceptable:";
 						}
 
-						for (int i = 0; i < titles.Count; i++)
+						for (int i = titles.Count - 1; i >= 0; i--)
 						{
 							string t = titles[i];
 
@@ -200,12 +195,11 @@ namespace ContractParser
 
 				if (l.Count > 0)
 				{
-
-					for (int j = 0; j < l.Count; j++)
+					for (int j = l.Count - 1; j >= 0; j--)
 					{
-						List<string> modNames = FinePrint.ContractDefs.GetModules(l[j]);
+						string m = l[j];
 
-						List<string> titles = getPartTitlesFromModules(modNames);
+						List<string> titles = getPartTitlesFromModuleType(m);
 
 						if (titles.Count > 0)
 						{
@@ -229,7 +223,7 @@ namespace ContractParser
 		{
 			List<string> l = new List<string>();
 
-			for (int i = 0; i < names.Count; i++)
+			for (int i = names.Count - 1; i >= 0; i--)
 			{
 				string s = names[i];
 
@@ -261,7 +255,7 @@ namespace ContractParser
 				if (string.IsNullOrEmpty(s))
 					continue;
 
-				for (int j = 0; j < PartLoader.LoadedPartsList.Count; j++)
+				for (int j = PartLoader.LoadedPartsList.Count - 1; j >= 0; j--)
 				{
 					AvailablePart p = PartLoader.LoadedPartsList[j];
 
@@ -279,6 +273,32 @@ namespace ContractParser
 
 					l.Add(p.title);
 				}
+			}
+
+			return l;
+		}
+
+		private List<string> getPartTitlesFromModuleType(string type)
+		{
+			List<string> l = new List<string>();
+
+			for (int i = PartLoader.LoadedPartsList.Count - 1; i >= 0; i--)
+			{
+				AvailablePart p = PartLoader.LoadedPartsList[i];
+
+				if (p == null)
+					continue;
+
+				if (p.partPrefab == null)
+					continue;
+
+				if (!p.partPrefab.HasValidContractObjective(type))
+					continue;
+
+				if (!ResearchAndDevelopment.PartModelPurchased(p))
+					continue;
+
+				l.Add(p.title);
 			}
 
 			return l;
