@@ -39,20 +39,31 @@ namespace ContractParser
 	public class contractController : MonoBehaviour
 	{
 		private static bool initialized;
+		private static bool ccLoaded;
 
 		public static contractController instance;
 
-		private void Start()
+		private void Awake()
 		{
 			if (initialized)
 				Destroy(gameObject);
 
-			instance = this;
-
 			DontDestroyOnLoad(gameObject);
 
-			Debug.Log("[Contract Parser] Starting Contract Parsing Controller...");
 			initialized = true;
+
+			instance = this;
+
+			if (!ccLoaded)
+			{
+				ccLoaded = true;
+				contractReflection.loadMethods();
+			}
+		}
+
+		private void Start()
+		{
+			Debug.Log("[Contract Parser] Starting Contract Parsing Controller...");
 
 			GameEvents.Contract.onParameterChange.Add(onParamChange);
 			GameEvents.Contract.onAccepted.Add(onAccepted);
@@ -76,7 +87,10 @@ namespace ContractParser
 				return;
 
 			if (c.AllParameters.Count() > cc.ParameterCount)
+			{
 				cc.updateFullParamInfo();
+				contractParser.onParameterAdded.Fire(c, p);
+			}
 		}
 
 		private void onAccepted(Contract c)
