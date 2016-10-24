@@ -118,22 +118,25 @@ namespace ContractParser
 					return "";
 				}
 
-				if (l.Count > 0)
+				if (l != null)
 				{
-					List<string> titles = getPartTitles(l);
-
-					if (titles.Count > 0)
+					if (l.Count > 0)
 					{
-						if (!string.IsNullOrEmpty(notes))
-							s = "\n";
+						List<string> titles = getPartTitles(l);
 
-						s += "The following parts are acceptable:";
-
-						for (int i = titles.Count - 1; i >= 0; i--)
+						if (titles.Count > 0)
 						{
-							string t = titles[i];
+							if (!string.IsNullOrEmpty(notes))
+								s = "\n";
 
-							s += "\n" + t;
+							s += "The following parts are acceptable:";
+
+							for (int i = titles.Count - 1; i >= 0; i--)
+							{
+								string t = titles[i];
+
+								s += "\n" + t;
+							}
 						}
 					}
 				}
@@ -148,25 +151,28 @@ namespace ContractParser
 					return "";
 				}
 
-				if (l.Count > 0)
+				if (l != null)
 				{
-					List<string> titles = getPartTitlesFromModules(l);
-
-					if (titles.Count > 0)
+					if (l.Count > 0)
 					{
-						if (string.IsNullOrEmpty(s))
+						List<string> titles = getPartTitlesFromModules(l);
+
+						if (titles.Count > 0)
 						{
-							if (!string.IsNullOrEmpty(notes))
-								s = "\n";
+							if (string.IsNullOrEmpty(s))
+							{
+								if (!string.IsNullOrEmpty(notes))
+									s = "\n";
 
-							s = "The following parts are acceptable:";
-						}
+								s = "The following parts are acceptable:";
+							}
 
-						for (int i = titles.Count - 1; i >= 0; i--)
-						{
-							string t = titles[i];
+							for (int i = titles.Count - 1; i >= 0; i--)
+							{
+								string t = titles[i];
 
-							s += "\n" + t;
+								s += "\n" + t;
+							}
 						}
 					}
 				}
@@ -189,27 +195,30 @@ namespace ContractParser
 				}
 				catch (Exception e)
 				{
-					Debug.LogError("[Contract Parser] Error Detecting Acceptable Module Type Name...\n" + e);
+					Debug.LogError("[Contract Parser] Error Detecting Acceptable Module Type Name...\n" + e.ToString());
 					return "";
 				}
 
-				if (l.Count > 0)
+				if (l != null)
 				{
-					for (int j = l.Count - 1; j >= 0; j--)
+					if (l.Count > 0)
 					{
-						string m = l[j];
-
-						List<string> titles = getPartTitlesFromModuleType(m);
-
-						if (titles.Count > 0)
+						for (int j = l.Count - 1; j >= 0; j--)
 						{
-							s += string.Format("\nThe following parts are acceptable for Module Type - {0}:", l[j]);
+							string m = l[j];
 
-							for (int i = 0; i < titles.Count; i++)
+							List<string> titles = getPartTitlesFromModuleType(m);
+
+							if (titles.Count > 0)
 							{
-								string t = titles[i];
+								s += string.Format("\nThe following parts are acceptable for Module Type - {0}:", l[j]);
 
-								s += "\n" + t;
+								for (int i = 0; i < titles.Count; i++)
+								{
+									string t = titles[i];
+
+									s += "\n" + t;
+								}
 							}
 						}
 					}
