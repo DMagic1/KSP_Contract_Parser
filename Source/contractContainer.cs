@@ -60,8 +60,6 @@ namespace ContractParser
 		private List<parameterContainer> paramList = new List<parameterContainer>();
 		private List<parameterContainer> allParamList = new List<parameterContainer>();
 
-		private static KSPUtil.DefaultDateTimeFormatter timeFormatter;
-
 		public contractContainer(Contract c)
 		{
 			root = c;
@@ -374,8 +372,6 @@ namespace ContractParser
 			{
 				if (t == typeof(CollectScience))
 					return ((CollectScience)root).TargetBody;
-				else if (t == typeof(ExploreBody))
-					return ((ExploreBody)root).TargetBody;
 				else if (t == typeof(PartTest))
 				{
 					var fields = typeof(PartTest).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
@@ -417,16 +413,11 @@ namespace ContractParser
 					return ((SurveyContract)root).targetBody;
 				else if (t == typeof(TourismContract))
 					return null;
-				else if (t == typeof(WorldFirstContract))
+				else if (t == typeof(ExplorationContract))
 				{
-					var fields = typeof(WorldFirstContract).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+					var fields = typeof(ExplorationContract).GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
-					var milestone = fields[0].GetValue((WorldFirstContract)root) as ProgressMilestone;
-
-					if (milestone == null)
-						return null;
-
-					return milestone.body;
+					return fields[1].GetValue((ExplorationContract)root) as CelestialBody;
 				}
 				else
 					checkTitle = true;
@@ -471,30 +462,7 @@ namespace ContractParser
 			if (D <= 0)
 				return "----";
 
-			if (timeFormatter == null)
-				timeFormatter = new KSPUtil.DefaultDateTimeFormatter();
-
-			int[] time = timeFormatter.GetDateFromUT((int)D);
-			StringBuilder s = new StringBuilder();
-
-			if (time[4] > 0)
-				s.Append(string.Format("{0}y", time[4]));
-			if (time[3] > 0)
-			{
-				if (!string.IsNullOrEmpty(s.ToString()))
-					s.Append(" ");
-				s.Append(string.Format("{0}d", time[3]));
-			}
-			if (time[4] <= 0 && time[2] > 0)
-			{
-				if (!string.IsNullOrEmpty(s.ToString()))
-					s.Append(" ");
-				s.Append(string.Format("{0}h", time[2]));
-			}
-			if (time[4] <= 0 && time[3] <= 0 && time[2] <= 0 && time[1] > 0)
-				s.Append(string.Format("{0}m", time[1]));
-
-			return s.ToString();
+			return KSPUtil.dateTimeFormatter.PrintTime(D, 2, false);
 		}
 
 		public Contract Root
@@ -748,7 +716,6 @@ namespace ContractParser
 		{
 			get { return allParamList; }
 		}
-
 
 	}
 }
