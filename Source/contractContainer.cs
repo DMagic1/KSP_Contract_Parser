@@ -463,31 +463,6 @@ namespace ContractParser
 				return "----";
 
 			return KSPUtil.dateTimeFormatter.PrintTime(D, 2, false);
-
-			//if (timeFormatter == null)
-			//	timeFormatter = new KSPUtil.DefaultDateTimeFormatter();
-
-			//int[] time = timeFormatter.GetDateFromUT((int)D);
-			//StringBuilder s = new StringBuilder();
-
-			//if (time[4] > 0)
-			//	s.Append(string.Format("{0}y", time[4]));
-			//if (time[3] > 0)
-			//{
-			//	if (!string.IsNullOrEmpty(s.ToString()))
-			//		s.Append(" ");
-			//	s.Append(string.Format("{0}d", time[3]));
-			//}
-			//if (time[4] <= 0 && time[2] > 0)
-			//{
-			//	if (!string.IsNullOrEmpty(s.ToString()))
-			//		s.Append(" ");
-			//	s.Append(string.Format("{0}h", time[2]));
-			//}
-			//if (time[4] <= 0 && time[3] <= 0 && time[2] <= 0 && time[1] > 0)
-			//	s.Append(string.Format("{0}m", time[1]));
-
-			//return s.ToString();
 		}
 
 		public Contract Root
@@ -741,7 +716,6 @@ namespace ContractParser
 		{
 			get { return allParamList; }
 		}
-
 
 	}
 }
