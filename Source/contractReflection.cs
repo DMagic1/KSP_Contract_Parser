@@ -50,8 +50,14 @@ namespace ContractParser
 		{
 			try
 			{
-				Type CConfigType = AssemblyLoader.loadedAssemblies.SelectMany(a => a.assembly.GetExportedTypes())
-						.SingleOrDefault(t => t.FullName == CCType);
+				Type CConfigType = null;
+				AssemblyLoader.loadedAssemblies.TypeOperation(t =>
+				{
+					if (t.FullName == CCType)
+					{
+						CConfigType = t;
+					}
+				});
 
 				if (CConfigType == null)
 				{
