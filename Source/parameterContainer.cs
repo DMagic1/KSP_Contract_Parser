@@ -27,12 +27,14 @@ THE SOFTWARE.
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Reflection;
 using Contracts;
 using FinePrint;
 using FinePrint.Contracts;
 using FinePrint.Contracts.Parameters;
 using UnityEngine;
+using KSP.Localization;
 
 namespace ContractParser
 {
@@ -50,6 +52,8 @@ namespace ContractParser
 		private string fundsRewString, fundsPenString, repRewString, repPenString, sciRewString;
 		private Waypoint waypoint;
 		private List<parameterContainer> paramList = new List<parameterContainer>();
+
+		private StringBuilder customNoteString;
 
 		public parameterContainer(contractContainer Root, ContractParameter cP, int Level)
 		{
@@ -96,7 +100,7 @@ namespace ContractParser
 
 		private string setCustomNotes()
 		{
-			string s = "";
+			customNoteString = StringBuilderCache.Acquire();
 			Type pType = cParam.GetType();
 
 			if (pType == typeof(PartRequestParameter))
@@ -114,7 +118,7 @@ namespace ContractParser
 				}
 				catch (Exception e)
 				{
-					Debug.LogError("[Contract Parser] Error Detecting Acceptable Parts Name...\n" + e);
+					Debug.LogError("[Contract Parser] Custom Notes: Error Detecting Acceptable Parts Name...\n" + e);
 					return "";
 				}
 
@@ -127,15 +131,19 @@ namespace ContractParser
 						if (titles.Count > 0)
 						{
 							if (!string.IsNullOrEmpty(notes))
-								s = "\n";
+							{
+								customNoteString.AppendLine();
+								customNoteString.AppendLine();
+							}
 
-							s += "The following parts are acceptable:";
+							customNoteString.Append(Localization.Format("#autoLOC_ContractParser_PartRequest"));
 
 							for (int i = titles.Count - 1; i >= 0; i--)
 							{
 								string t = titles[i];
 
-								s += "\n" + t;
+								customNoteString.AppendLine();
+								customNoteString.Append(t);
 							}
 						}
 					}
@@ -147,7 +155,7 @@ namespace ContractParser
 				}
 				catch (Exception e)
 				{
-					Debug.LogError("[Contract Parser] Error Detecting Acceptable Part Modules Name...\n" + e);
+					Debug.LogError("[Contract Parser] Custom Notes: Error Detecting Acceptable Part Modules Name...\n" + e);
 					return "";
 				}
 
@@ -159,19 +167,23 @@ namespace ContractParser
 
 						if (titles.Count > 0)
 						{
-							if (string.IsNullOrEmpty(s))
+							if (customNoteString.Length == 0)
 							{
 								if (!string.IsNullOrEmpty(notes))
-									s = "\n";
+								{
+									customNoteString.AppendLine();
+									customNoteString.AppendLine();
+								}
 
-								s = "The following parts are acceptable:";
+								customNoteString.Append(Localization.Format("#autoLOC_ContractParser_PartRequest"));
 							}
 
 							for (int i = titles.Count - 1; i >= 0; i--)
 							{
 								string t = titles[i];
 
-								s += "\n" + t;
+								customNoteString.AppendLine();
+								customNoteString.Append(t);
 							}
 						}
 					}
@@ -195,7 +207,7 @@ namespace ContractParser
 				}
 				catch (Exception e)
 				{
-					Debug.LogError("[Contract Parser] Error Detecting Acceptable Module Type Name...\n" + e.ToString());
+					Debug.LogError("[Contract Parser] Custom Notes: Error Detecting Acceptable Module Type Name...\n" + e.ToString());
 					return "";
 				}
 
@@ -211,13 +223,17 @@ namespace ContractParser
 
 							if (titles.Count > 0)
 							{
-								s += string.Format("\nThe following parts are acceptable for Module Type - {0}:", l[j]);
+								customNoteString.AppendLine();
+								customNoteString.AppendLine();
+
+								customNoteString.Append(Localization.Format("#autoLOC_ContractParser_ModuleType", l[j]));
 
 								for (int i = 0; i < titles.Count; i++)
 								{
 									string t = titles[i];
 
-									s += "\n" + t;
+									customNoteString.AppendLine();
+									customNoteString.Append(t);
 								}
 							}
 						}
@@ -225,7 +241,7 @@ namespace ContractParser
 				}
 			}
 
-			return s;
+			return customNoteString.ToStringAndRelease();
 		}
 
 		private List<string> getPartTitles(List<string> names)
@@ -256,7 +272,7 @@ namespace ContractParser
 		private List<string> getPartTitlesFromModules(List<string> names)
 		{
 			List<string> l = new List<string>();
-
+			
 			for (int i = 0; i < names.Count; i++)
 			{
 				string s = names[i];
@@ -266,6 +282,7 @@ namespace ContractParser
 
 				for (int j = PartLoader.LoadedPartsList.Count - 1; j >= 0; j--)
 				{
+
 					AvailablePart p = PartLoader.LoadedPartsList[j];
 
 					if (p == null)
@@ -277,10 +294,31 @@ namespace ContractParser
 					if (p.partPrefab == null)
 						continue;
 
-					if (!p.partPrefab.Modules.Contains(s))
-						continue;
+					try
+					{
+						int hash = s.GetHashCode();
 
-					l.Add(p.title);
+						for (int k = p.partPrefab.Modules.Count - 1; k >= 0; k--)
+						{
+							PartModule pm = p.partPrefab.Modules[k];
+
+							if (pm == null)
+								continue;
+
+							if (pm.ModuleAttributes == null)
+								continue;
+							
+							if (pm.ClassID != hash)
+								continue;
+
+							l.Add(p.title);
+							break;
+						}
+					}
+					catch (Exception e)
+					{
+						Debug.LogError("[Contract Parser] Custom Notes: Error Parsing Part: [" + p.name + "] For Module: [" + s + "]\n" + e.ToString());
+					}
 				}
 			}
 
@@ -301,13 +339,20 @@ namespace ContractParser
 				if (p.partPrefab == null)
 					continue;
 
-				if (!p.partPrefab.HasValidContractObjective(type))
-					continue;
+				try
+				{
+					if (!p.partPrefab.HasValidContractObjective(type))
+						continue;
 
-				if (!ResearchAndDevelopment.PartModelPurchased(p))
-					continue;
+					if (!ResearchAndDevelopment.PartModelPurchased(p))
+						continue;
 
-				l.Add(p.title);
+					l.Add(p.title);
+				}
+				catch (Exception e)
+				{
+					Debug.LogError("[Contract Parser] Custom Notes: Error Parsing Part: [" + p.name + "] For Module Type: ["+ type + "]\n" + e.ToString());
+				}
 			}
 
 			return l;
