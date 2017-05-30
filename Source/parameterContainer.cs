@@ -136,7 +136,7 @@ namespace ContractParser
 								customNoteString.AppendLine();
 							}
 
-							customNoteString.Append(Localization.Format("#autoLOC_ContractParser_PartRequest"));
+							customNoteString.Append(Localizer.Format("#autoLOC_ContractParser_PartRequest"));
 
 							for (int i = titles.Count - 1; i >= 0; i--)
 							{
@@ -175,7 +175,7 @@ namespace ContractParser
 									customNoteString.AppendLine();
 								}
 
-								customNoteString.Append(Localization.Format("#autoLOC_ContractParser_PartRequest"));
+								customNoteString.Append(Localizer.Format("#autoLOC_ContractParser_PartRequest"));
 							}
 
 							for (int i = titles.Count - 1; i >= 0; i--)
@@ -226,7 +226,7 @@ namespace ContractParser
 								customNoteString.AppendLine();
 								customNoteString.AppendLine();
 
-								customNoteString.Append(Localization.Format("#autoLOC_ContractParser_ModuleType", l[j]));
+								customNoteString.Append(Localizer.Format("#autoLOC_ContractParser_ModuleType", l[j]));
 
 								for (int i = 0; i < titles.Count; i++)
 								{
