@@ -151,12 +151,6 @@ namespace ContractParser
 			decPen = HighLogic.CurrentGame.Parameters.Career.RepLossDeclined;
 			decPenString = decPen.ToString("F0");
 
-			totalFundsReward = rewards();
-			totalFundsPenalty = penalties();
-			totalRepReward = repRewards();
-			totalSciReward = sciRewards();
-			totalRepPenalty = repPenalties();
-
 			//Generate four layers of parameters
 			for (int i = 0; i < c.ParameterCount; i++)
 			{
@@ -167,6 +161,12 @@ namespace ContractParser
 
 				addContractParam(param, 0);
 			}
+
+			totalFundsReward = rewards();
+			totalFundsPenalty = penalties();
+			totalRepReward = repRewards();
+			totalSciReward = sciRewards();
+			totalRepPenalty = repPenalties();
 
 			CelestialBody t = getTargetBody();
 
