@@ -35,6 +35,7 @@ using FinePrint.Contracts;
 using FinePrint.Contracts.Parameters;
 using UnityEngine;
 using KSP.Localization;
+using SentinelMission;
 
 namespace ContractParser
 {
@@ -42,6 +43,7 @@ namespace ContractParser
 	{
 		private contractContainer root;
 		private ContractParameter cParam;
+		private Type cParamType;
 		private bool showNote;
 		private string title;
 		private string notes;
@@ -59,6 +61,7 @@ namespace ContractParser
 		{
 			root = Root;
 			cParam = cP;
+			cParamType = cParam.GetType();
 
 			try
 			{
@@ -101,13 +104,12 @@ namespace ContractParser
 		private string setCustomNotes()
 		{
 			customNoteString = StringBuilderCache.Acquire();
-			Type pType = cParam.GetType();
 
-			if (pType == typeof(PartRequestParameter))
+			if (cParamType == typeof(PartRequestParameter))
 			{
 				List<string> l = new List<string>();
 
-				var partFields = pType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+				var partFields = cParamType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
 				if (partFields == null)
 					return "";
@@ -189,14 +191,14 @@ namespace ContractParser
 					}
 				}
 			}
-			else if (pType == typeof(VesselSystemsParameter))
+			else if (cParamType == typeof(VesselSystemsParameter))
 			{
 				if (!((VesselSystemsParameter)cParam).requireNew)
 					return "";
 
 				List<string> l = new List<string>();
 
-				var modFields = pType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+				var modFields = cParamType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
 				if (modFields == null)
 					return "";
@@ -239,6 +241,13 @@ namespace ContractParser
 						}
 					}
 				}
+			}
+			else if (cParamType == typeof(SentinelParameter))
+			{
+				int r = ((SentinelParameter)cParam).RemainingDiscoveries;
+				int t = ((SentinelParameter)cParam).TotalDiscoveries;
+
+				customNoteString.Append(Localizer.Format("#autoLOC_ContractParser_SentinalNote", t - r, t));
 			}
 
 			return customNoteString.ToStringAndRelease();
@@ -474,6 +483,11 @@ namespace ContractParser
 		public ContractParameter CParam
 		{
 			get { return cParam; }
+		}
+
+		public Type CParamType
+		{
+			get { return cParamType; }
 		}
 
 		public Waypoint Way
